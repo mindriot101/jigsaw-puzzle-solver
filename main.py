@@ -9,4 +9,3 @@ if __name__ == "__main__":
     image = cv2.imread(image_filename)
 
     result = process_piece(image)
-    import IPython; IPython.embed(); exit()
