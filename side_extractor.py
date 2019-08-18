@@ -50,14 +50,14 @@ def extract_piece(thresh):
     ly, lx = minmax_y[1] - minmax_y[0], minmax_x[1] - minmax_x[0]
     size = int(max(ly, lx) * np.sqrt(2))
 
-    x_extract = thresh[minmax_y[0] : minmax_y[1] + 1, minmax_x[0] : minmax_x[1] + 1]
+    x_extract = thresh[minmax_y[0]:minmax_y[1] + 1, minmax_x[0]:minmax_x[1] + 1]
     ly, lx = x_extract.shape
 
     xeh, xew = x_extract.shape
     x_copy = np.full((size, size), 255, dtype="uint8")
     sy, sx = size // 2 - ly // 2, size // 2 - lx // 2
 
-    x_copy[sy : sy + ly, sx : sx + lx] = x_extract
+    x_copy[sy:sy + ly, sx:sx + lx] = x_extract
     thresh = x_copy
     thresh = 255 - thresh
     return thresh
@@ -125,7 +125,6 @@ def compute_mean_line(lines, debug=False):
     m_theta = np.arctan2(m_sine, m_cosine)
 
     if debug:
-        print(correction_factor)
         print(weights)
         print()
 
@@ -133,9 +132,10 @@ def compute_mean_line(lines, debug=False):
 
 
 def line_intersection(line1, line2):
-    # Solve the linear system that computes the intersection between
-    # two lines, each one defined as a tuple (rho, theta) (the result comes from Hough lines)
-    # If the lines have the same theta (parallel lines), a None result is returned
+    # Solve the linear system that computes the intersection between two lines,
+    # each one defined as a tuple (rho, theta) (the result comes from Hough
+    # lines) If the lines have the same theta (parallel lines), a None result
+    # is returned
 
     rho1, theta1 = line1
     rho2, theta2 = line2
@@ -158,7 +158,7 @@ def compute_intersections(mean_lines, dims):
     intersections = []
 
     for i, line_i in enumerate(mean_lines):
-        for j, line_j in enumerate(mean_lines[i + 1 :], start=i + 1):
+        for j, line_j in enumerate(mean_lines[i + 1:], start=i + 1):
 
             x0, y0 = line_intersection(line_i, line_j)
 
@@ -189,7 +189,7 @@ def corner_detection(edges, intersections, xs, rect_size=50, show=False):
         a, b, c = m, -1, -m * x0 + y0
 
         rect = edges[
-            yi - rect_size : yi + rect_size, xi - rect_size : xi + rect_size
+            yi - rect_size:yi + rect_size, xi - rect_size:xi + rect_size
         ].copy()
 
         edge_idx = np.nonzero(rect)
@@ -205,7 +205,8 @@ def corner_detection(edges, intersections, xs, rect_size=50, show=False):
 
             corners.append(real_corner)
         else:
-            # If the window is completely black I can make no assumption: I keep the same corner
+            # If the window is completely black I can make no assumption: I
+            # keep the same corner
             corners.append(intersection)
 
         if show:
@@ -235,13 +236,13 @@ def compute_line_params(corners):
 
 
 def shape_classification(edges, line_params, d_threshold=500, n_hs=10):
-    # First part: we take all edge points and classify them only if their distance to one of the 4 piece
-    # lines is smaller than a certain threshold. If that happens, we can be certain that the point belongs
-    # to that side of the piece. If each one of the four distances is higher than the threshold, the point
-    # will be classified during the second phase.
+    # First part: we take all edge points and classify them only if their
+    # distance to one of the 4 piece lines is smaller than a certain threshold.
+    # If that happens, we can be certain that the point belongs to that side of
+    # the piece. If each one of the four distances is higher than the
+    # threshold, the point will be classified during the second phase.
 
     y_nonzero, x_nonzero = np.nonzero(edges)
-    distances = []
 
     class_image = np.zeros(edges.shape, dtype="uint8")
     non_classified_points = []
@@ -259,14 +260,17 @@ def shape_classification(edges, line_params, d_threshold=500, n_hs=10):
     non_classified_points = np.array(non_classified_points)
 
     # Second part: hysteresis classification
-    # Edge points that have not been classified because they are too far from all lines
-    # will be classified based on their neighborood: if the neighborhood of a point contains
-    # an already classified point, it will be classified with the same class.
-    # It's very unlikely that the neighborhood of a non classified point will contain two different
-    # classes, so we just take the first non-zero value that we find inside the neighborhood
-    # The process is repeated and at each iteration the newly classified points are removed from the ones
-    # that still need to be classified. The process is interrupted when no new point has been classified
-    # or when a maximum number of iterations has been reached (in case of a noisy points that has no neighbours).
+    # Edge points that have not been classified because they are too far from
+    # all lines will be classified based on their neighborood: if the
+    # neighborhood of a point contains an already classified point, it will be
+    # classified with the same class.  It's very unlikely that the neighborhood
+    # of a non classified point will contain two different classes, so we just
+    # take the first non-zero value that we find inside the neighborhood The
+    # process is repeated and at each iteration the newly classified points are
+    # removed from the ones that still need to be classified. The process is
+    # interrupted when no new point has been classified or when a maximum
+    # number of iterations has been reached (in case of a noisy points that has
+    # no neighbours).
 
     map_iteration = 0
     max_map_iterations = 50
@@ -278,7 +282,7 @@ def shape_classification(edges, line_params, d_threshold=500, n_hs=10):
 
         for idx, (x_edge, y_edge) in enumerate(non_classified_points):
             neighborhood = class_image[
-                y_edge - n_hs : y_edge + n_hs + 1, x_edge - n_hs : x_edge + n_hs + 1
+                y_edge - n_hs:y_edge + n_hs + 1, x_edge - n_hs:x_edge + n_hs + 1
             ]
             n_mapped = np.nonzero(neighborhood)
             if len(n_mapped[0]) > 0:
@@ -298,13 +302,16 @@ def shape_classification(edges, line_params, d_threshold=500, n_hs=10):
 
 def compute_inout(class_image, line_params, bs, d_threshold=10):
 
-    # Given the full class image, the line parameters and the coordinates of the barycenter,
-    # compute for each side if the curve of the piece goes inside (in) or outside (out).
-    # This is done by computing the mean coordinates for each class and see if the signed distance
-    # from the corners' line has the same sign of the signed distance of the barycenter. If that
-    # true, the two points lie on the same side and we have a in; otherwise we have a out.
-    # To let the points of the curve to contribute more to the mean point calculation, only the
-    # signed distances that are greater than a threshold are used.
+    # Given the full class image, the line parameters and the coordinates of
+    # the barycenter, compute for each side if the curve of the piece goes
+    # inside (in) or outside (out).  This is done by computing the mean
+    # coordinates for each class and see if the signed distance from the
+    # corners' line has the same sign of the signed distance of the barycenter.
+    # If that true, the two points lie on the same side and we have a in;
+    # otherwise we have a out.  To let the points of the curve to contribute
+    # more to the mean point calculation, only the signed distances that are
+    # greater than a threshold are used.
+
     xb, yb = bs
     inout = []
 
@@ -380,7 +387,7 @@ def create_side_images(class_image, inout, corners):
             np.min(nz[1]),
             np.max(nz[1]),
         )
-        side_image_rot = side_image_rot[min_y : max_y + 1, min_x : max_x + 1]
+        side_image_rot = side_image_rot[min_y:max_y + 1, min_x:max_x + 1]
 
         side_images.append(side_image_rot)
 
@@ -473,7 +480,6 @@ def get_corners(dst, neighborhood_size=5, score_threshold=0.3, minmax_threshold=
     maxima[diff == 0] = 0
 
     labeled, num_objects = ndimage.label(maxima)
-    slices = ndimage.find_objects(labeled)
     yx = np.array(
         ndimage.center_of_mass(data, labeled, list(range(1, num_objects + 1)))
     )
@@ -486,19 +492,21 @@ def get_best_fitting_rect_coords(xy, d_threshold=30, perp_angle_thresh=20, verbo
     all detected Harris corners and we find the best corresponding rectangle.
     We perform a recursive search with max depth = 2:
     - At depth 0 we take one of the input point as the first corner of the rectangle
-    - At depth 1 we select another input point (with distance from the first point greater
-            then d_threshold) as the second point
-    - At depth 2 and 3 we take the other points. However, the lines 01-12 and 12-23 should be
-            as perpendicular as possible. If the angle formed by these lines is too much far from the
-            right angle, we discard the choice.
-    - At depth 3, if a valid candidate (4 points that form an almost perpendicular rectangle) is found,
-            we add it to the list of candidates.
+    - At depth 1 we select another input point (with distance from the first
+      point greater then d_threshold) as the second point
+    - At depth 2 and 3 we take the other points. However, the lines 01-12 and
+      12-23 should be as perpendicular as possible. If the angle formed by
+      these lines is too much far from the right angle, we discard the choice.
+    - At depth 3, if a valid candidate (4 points that form an almost
+      perpendicular rectangle) is found, we add it to the list of candidates.
 
-    Given a list of candidate rectangles, we then select the best one by taking the candidate that maximizes
-    the function: area * Gaussian(rectangularness)
-    - area: it is the area of the candidate shape. We expect that the puzzle corners will form the maximum area
-    - rectangularness: it is the mse of the candidate shape's angles compared to a 90 degree angles. The smaller
-                                            this value, the most the shape is similar toa rectangle.
+    Given a list of candidate rectangles, we then select the best one by taking
+    the candidate that maximizes the function: area * Gaussian(rectangularness)
+    - area: it is the area of the candidate shape. We expect that the puzzle
+      corners will form the maximum area
+    - rectangularness: it is the mse of the candidate shape's angles compared
+      to a 90 degree angles. The smaller this value, the most the shape is
+      similar toa rectangle.
     """
     N = len(xy)
 
@@ -585,8 +593,6 @@ def get_best_fitting_rect_coords(xy, d_threshold=30, perp_angle_thresh=20, verbo
                     "\t" * depth,
                     "diff0:",
                     np.nonzero(diff0)[0],
-                    "diff180:",
-                    np.nonzero(diff180)[0],
                     "diff_to_explore:",
                     diff_to_explore,
                 )
@@ -670,7 +676,7 @@ def get_best_fitting_rect_coords(xy, d_threshold=30, perp_angle_thresh=20, verbo
     return xy[best_fitting_idxs]
 
 
-####################################################################################################################
+#######################################################################################
 
 
 def get_default_params():

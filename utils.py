@@ -4,10 +4,10 @@ import cv2
 
 def get_line_through_points(p0, p1):
     """
-        Given two points p0 (x0, y0) and p1 (x1, y1),
-        compute the coefficients (a, b, c) of the line 
-        that passes through both points.
-        """
+    Given two points p0 (x0, y0) and p1 (x1, y1),
+    compute the coefficients (a, b, c) of the line
+    that passes through both points.
+    """
     x0, y0 = p0
     x1, y1 = p1
 
