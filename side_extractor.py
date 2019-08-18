@@ -2,11 +2,9 @@ import numpy as np
 import scipy
 import scipy.ndimage as ndimage
 import scipy.ndimage.filters as filters
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from functools import partial
 import cv2
-import skimage
 from sklearn.cluster import KMeans
 from utils import (
     get_line_through_points,
